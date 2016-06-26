@@ -47,22 +47,32 @@ inline int BindingType<ArgType>::toWireType(ArgType arg) {
 
 class Int64 {};
 
-template <>
-inline int BindingType<uint64_t>::toWireType(uint64_t arg) {
+template <typename ArgType>
+static inline double uint64ToWire(ArgType arg) {
+	if(arg <= 0x20000000000000ULL) {
+		return(static_cast<double>(arg));
+	}
+
 	cbFunction *jsConstructor = BindClass<Int64>::getInstance().getValueConstructorJS();
 
 	if(jsConstructor != nullptr) {
 		cbOutput construct(*jsConstructor);
 
-		return(construct(uint32_t(arg >> 32), uint32_t(arg), false));
+		// TODO: convert to double bigger than 0x20000000000000.0
+		return(construct(static_cast<uint32_t>(arg >> 32), static_cast<uint32_t>(arg), false));
 	} else {
 		// Int64 JavaScript class is missing or not registered.
+		// TODO: use a constant bigger than 0x20000000000000.0
 		return(0);
 	}
 }
 
-template <>
-inline int BindingType<int64_t>::toWireType(int64_t arg) {
+template <typename ArgType>
+static inline double int64ToWire(ArgType arg) {
+	if(arg >= -0x20000000000000LL && arg <= 0x20000000000000LL) {
+		return(static_cast<double>(arg));
+	}
+
 	cbFunction *jsConstructor = BindClass<Int64>::getInstance().getValueConstructorJS();
 
 	if(jsConstructor != nullptr) {
@@ -71,12 +81,38 @@ inline int BindingType<int64_t>::toWireType(int64_t arg) {
 		bool sign = arg < 0;
 		if(sign) arg = -arg;
 
-		return(construct(uint32_t(arg >> 32), uint32_t(arg), sign));
+		// TODO: convert to double bigger than 0x20000000000000.0
+		return(construct(static_cast<uint32_t>(arg >> 32), static_cast<uint32_t>(arg), sign));
 	} else {
 		// Int64 JavaScript class is missing or not registered.
+		// TODO: use a constant bigger than 0x20000000000000.0
 		return(0);
 	}
 }
+
+template <> struct BindingType<unsigned long> {
+	typedef unsigned long Type;
+	typedef double WireType;
+	static inline double toWireType(Type arg) { return(uint64ToWire(arg)); }
+};
+
+template <> struct BindingType<unsigned long long> {
+	typedef unsigned long long Type;
+	typedef double WireType;
+	static inline double toWireType(Type arg) { return(uint64ToWire(arg)); }
+};
+
+template <> struct BindingType<long> {
+	typedef long Type;
+	typedef double WireType;
+	static inline double toWireType(Type arg) { return(int64ToWire(arg)); }
+};
+
+template <> struct BindingType<long long> {
+	typedef long long Type;
+	typedef double WireType;
+	static inline double toWireType(Type arg) { return(int64ToWire(arg)); }
+};
 
 template <typename ArgType>
 ArgType BindingType<ArgType>::fromWireType(int index) {

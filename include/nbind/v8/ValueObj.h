@@ -102,8 +102,14 @@ ArgType BindingType<ArgType>::fromWireType(WireType arg) noexcept(false) {
 
 class Int64 {};
 
-template <>
-inline WireType BindingType<uint64_t>::toWireType(uint64_t arg) {
+template <typename ArgType>
+static inline WireType uint64ToWire(ArgType arg) {
+	if(arg <= 0xffffffffU) {
+		return(Nan::New<v8::Uint32>(static_cast<uint32_t>(arg)));
+	} else if(arg <= 0x20000000000000ULL) {
+		return(Nan::New<v8::Number>(static_cast<double>(arg)));
+	}
+
 	v8::Local<v8::Value> output = Nan::Undefined();
 	cbFunction *jsConstructor = BindClass<Int64>::getInstance().getValueConstructorJS();
 
@@ -118,8 +124,14 @@ inline WireType BindingType<uint64_t>::toWireType(uint64_t arg) {
 	return(output);
 }
 
-template <>
-inline WireType BindingType<int64_t>::toWireType(int64_t arg) {
+template <typename ArgType>
+static inline WireType int64ToWire(ArgType arg) {
+	if(arg >= -0x80000000 && arg <= 0x7fffffff) {
+		return(Nan::New<v8::Int32>(static_cast<int32_t>(arg)));
+	} else if(arg >= -0x20000000000000LL && arg <= 0x20000000000000LL) {
+		return(Nan::New<v8::Number>(static_cast<double>(arg)));
+	}
+
 	v8::Local<v8::Value> output = Nan::Undefined();
 	cbFunction *jsConstructor = BindClass<Int64>::getInstance().getValueConstructorJS();
 
@@ -135,6 +147,26 @@ inline WireType BindingType<int64_t>::toWireType(int64_t arg) {
 	}
 
 	return(output);
+}
+
+template <>
+inline WireType BindingType<unsigned long>::toWireType(unsigned long arg) {
+	return(uint64ToWire(arg));
+}
+
+template <>
+inline WireType BindingType<unsigned long long>::toWireType(unsigned long long arg) {
+	return(uint64ToWire(arg));
+}
+
+template <>
+inline WireType BindingType<long>::toWireType(long arg) {
+	return(int64ToWire(arg));
+}
+
+template <>
+inline WireType BindingType<long long>::toWireType(long long arg) {
+	return(int64ToWire(arg));
 }
 
 } // namespace
